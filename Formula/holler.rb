@@ -5,7 +5,7 @@ class Holler < Formula
   desc "Ping coworkers on the same Wi-Fi, straight from the menu bar"
   homepage "https://github.com/NicholasDominici/holler"
   url "https://github.com/NicholasDominici/holler/archive/refs/tags/v0.1.0.tar.gz"
-  sha256 "PLACEHOLDER"
+  sha256 "7a4a376f9da7400dff5abd5621c9387f330f005747b19935bbfd6a7cdb4f1366"
   license "MIT"
   head "https://github.com/NicholasDominici/holler.git", branch: "main"
 
