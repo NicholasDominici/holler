@@ -4,15 +4,15 @@
 class Holler < Formula
   desc "Ping coworkers on the same Wi-Fi, straight from the menu bar"
   homepage "https://github.com/NicholasDominici/holler"
-  url "https://github.com/NicholasDominici/holler/archive/refs/tags/v0.1.0.tar.gz"
-  sha256 "7a4a376f9da7400dff5abd5621c9387f330f005747b19935bbfd6a7cdb4f1366"
+  url "https://github.com/NicholasDominici/holler/archive/refs/tags/v0.1.1.tar.gz"
+  sha256 "8eccb83b03127c9a83bc8e7b0207f57d861c02312575a33d6a1df72b8f873052"
   license "MIT"
   head "https://github.com/NicholasDominici/holler.git", branch: "main"
 
   depends_on :macos
 
   def install
-    system "make", "app"
+    system "make", "app", "SWIFT_FLAGS=--disable-sandbox"
     prefix.install "build/Holler.app"
   end
 
