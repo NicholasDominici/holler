@@ -10,21 +10,6 @@ under their menu bar — **"Hunter is pinging you 👋"** — with a ding. You g
 quiet ✓ in your menu bar confirming it landed. That's it. No accounts, no
 server, no dismissal flow.
 
-## How it works
-
-- Each running copy advertises itself over **Bonjour** (`_holler._tcp`) on the
-  local network and browses for everyone else. Discovery is automatic — open
-  the menu and whoever's on the same Wi-Fi is just there.
-- A ping is a one-shot TCP message straight to the other Mac. The receiver
-  shows the banner, plays a sound, and acks; the sender's menu bar icon
-  flashes ✓ (or ✕ with a warning if the peer couldn't be reached).
-- Names are self-assigned (defaults to your macOS full name, change it any
-  time from the menu) and stored locally in `UserDefaults`. Nothing leaves
-  the local network.
-
-100% native Swift + AppKit + Network.framework. No Electron, no dependencies,
-no backend.
-
 ## Install
 
 ### Homebrew
@@ -47,6 +32,21 @@ cd holler
 make install        # builds Holler.app and copies it to /Applications
 open /Applications/Holler.app
 ```
+
+## How it works
+
+- Each running copy advertises itself over **Bonjour** (`_holler._tcp`) on the
+  local network and browses for everyone else. Discovery is automatic — open
+  the menu and whoever's on the same Wi-Fi is just there.
+- A ping is a one-shot TCP message straight to the other Mac. The receiver
+  shows the banner, plays a sound, and acks; the sender's menu bar icon
+  flashes ✓ (or ✕ with a warning if the peer couldn't be reached).
+- Names are self-assigned (defaults to your macOS full name, change it any
+  time from the menu) and stored locally in `UserDefaults`. Nothing leaves
+  the local network.
+
+100% native Swift + AppKit + Network.framework. No Electron, no dependencies,
+no backend.
 
 ## First run
 
