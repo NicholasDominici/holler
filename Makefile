@@ -6,8 +6,12 @@ BINARY = .build/release/$(APP_NAME)
 
 all: app
 
+# SWIFT_FLAGS=--disable-sandbox is passed by the Homebrew formula: SwiftPM's own
+# build sandbox cannot nest inside brew's sandbox.
+SWIFT_FLAGS ?=
+
 build:
-	swift build -c release
+	swift build -c release $(SWIFT_FLAGS)
 
 app: build
 	rm -rf $(APP_DIR)
