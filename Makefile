@@ -1,8 +1,9 @@
 APP_NAME = Holler
 APP_DIR = build/$(APP_NAME).app
 BINARY = .build/release/$(APP_NAME)
+VERSION := $(shell /usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" Support/Info.plist)
 
-.PHONY: all build app install uninstall run clean
+.PHONY: all build app install uninstall run dist clean
 
 all: app
 
@@ -31,6 +32,10 @@ uninstall:
 
 run: app
 	open $(APP_DIR)
+
+dist: app
+	cd build && ditto -c -k --keepParent $(APP_NAME).app $(APP_NAME)-$(VERSION).zip
+	@echo "Built build/$(APP_NAME)-$(VERSION).zip"
 
 clean:
 	rm -rf build .build

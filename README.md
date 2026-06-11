@@ -33,6 +33,16 @@ make install        # builds Holler.app and copies it to /Applications
 open /Applications/Holler.app
 ```
 
+### Direct download
+
+Grab `Holler-x.y.z.zip` from the
+[latest release](https://github.com/NicholasDominici/holler/releases/latest),
+unzip, and drag Holler.app into /Applications. Because the app isn't
+notarized, macOS will block the first launch — go to System Settings →
+Privacy & Security and click **Open Anyway** (once per machine). The
+Homebrew/source installs skip that dance entirely, which is why they're
+listed first.
+
 ## How it works
 
 - Each running copy advertises itself over **Bonjour** (`_holler._tcp`) on the
