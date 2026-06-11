@@ -5,10 +5,22 @@ struct Peer {
     let id: String?
     let name: String
     let endpoint: NWEndpoint
+    let wiredInUntil: Date?
+
+    var isWiredIn: Bool { wiredInUntil.map { $0 > Date() } ?? false }
+}
+
+enum PingResult {
+    case delivered
+    case wiredIn
+    case failed
 }
 
 /// Advertises this machine over Bonjour, browses for other Holler users on the
 /// local network, and sends/receives pings over short-lived TCP connections.
+/// Wired In (focus) state is broadcast to peers in the TXT record and enforced
+/// on receive: pings arriving while Wired In are suppressed and answered with
+/// "focus" instead of "ok".
 final class PingService {
     static let serviceType = "_holler._tcp"
 
@@ -17,13 +29,15 @@ final class PingService {
     private var listener: NWListener?
     private var browser: NWBrowser?
     private var stopped = false
+    private var wiredInUntil: Date?
 
     let instanceID: String
     private(set) var displayName: String
 
     /// Called on the main queue with the sorted list of visible peers.
     var onPeersChanged: (([Peer]) -> Void)?
-    /// Called on the main queue with the sender's name when a ping arrives.
+    /// Called on the main queue with the sender's name when a ping arrives
+    /// (never fires while Wired In).
     var onPing: ((String) -> Void)?
 
     init(displayName: String) {
@@ -60,6 +74,16 @@ final class PingService {
         }
     }
 
+    /// Pass a future date to go Wired In until then, nil to end it.
+    /// Restarting the listener republishes the TXT record so peers update.
+    func setWiredIn(until: Date?) {
+        queue.async {
+            self.wiredInUntil = until
+            self.listener?.cancel()
+            self.startListener()
+        }
+    }
+
     // MARK: - Advertising / receiving
 
     private func startListener() {
@@ -70,11 +94,15 @@ final class PingService {
             scheduleRestartListener()
             return
         }
+        var txt = ["id": instanceID]
+        if let until = wiredInUntil, until > Date() {
+            txt["focus"] = String(Int(until.timeIntervalSince1970))
+        }
         listener.service = NWListener.Service(
             name: displayName,
             type: Self.serviceType,
             domain: nil,
-            txtRecord: Self.encodeTXT(["id": instanceID])
+            txtRecord: Self.encodeTXT(txt)
         )
         listener.newConnectionHandler = { [weak self] connection in
             self?.handleIncoming(connection)
@@ -103,8 +131,12 @@ final class PingService {
                     let line = Data(buffer[..<newline])
                     if let object = try? JSONSerialization.jsonObject(with: line) as? [String: String],
                        let from = object["from"], !from.isEmpty {
-                        DispatchQueue.main.async { self.onPing?(from) }
-                        connection.send(content: Data("ok\n".utf8), completion: .contentProcessed { _ in
+                        let wired = self.wiredInUntil.map { $0 > Date() } ?? false
+                        if !wired {
+                            DispatchQueue.main.async { self.onPing?(from) }
+                        }
+                        let reply = wired ? "focus\n" : "ok\n"
+                        connection.send(content: Data(reply.utf8), completion: .contentProcessed { _ in
                             connection.cancel()
                         })
                     } else {
@@ -155,14 +187,19 @@ final class PingService {
         for result in results {
             guard case let .service(name, _, _, _) = result.endpoint else { continue }
             var id: String?
+            var wiredInUntil: Date?
             if case let .bonjour(txt) = result.metadata {
                 id = txt["id"]
+                if let focus = txt["focus"], let epoch = TimeInterval(focus) {
+                    let until = Date(timeIntervalSince1970: epoch)
+                    if until > Date() { wiredInUntil = until }
+                }
             }
             if let id {
                 if id == instanceID { continue }
                 if !seenIDs.insert(id).inserted { continue }
             }
-            peers.append(Peer(id: id, name: name, endpoint: result.endpoint))
+            peers.append(Peer(id: id, name: name, endpoint: result.endpoint, wiredInUntil: wiredInUntil))
         }
         peers.sort { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
         DispatchQueue.main.async { self.onPeersChanged?(peers) }
@@ -170,18 +207,18 @@ final class PingService {
 
     // MARK: - Sending
 
-    /// Connects to a peer, delivers the ping, and waits for its "ok" ack.
-    /// Completion runs on the main queue with whether delivery was confirmed.
-    func ping(_ peer: Peer, completion: @escaping (Bool) -> Void) {
+    /// Connects to a peer, delivers the ping, and waits for its ack.
+    /// Completion runs on the main queue.
+    func ping(_ peer: Peer, completion: @escaping (PingResult) -> Void) {
         let params = NWParameters.tcp
         params.includePeerToPeer = true
         let connection = NWConnection(to: peer.endpoint, using: params)
         var finished = false
-        func finish(_ ok: Bool) {
+        func finish(_ result: PingResult) {
             guard !finished else { return }
             finished = true
             connection.cancel()
-            DispatchQueue.main.async { completion(ok) }
+            DispatchQueue.main.async { completion(result) }
         }
         connection.stateUpdateHandler = { [displayName, instanceID] state in
             switch state {
@@ -189,26 +226,32 @@ final class PingService {
                 guard let payload = try? JSONSerialization.data(
                     withJSONObject: ["from": displayName, "id": instanceID]
                 ) else {
-                    finish(false)
+                    finish(.failed)
                     return
                 }
                 connection.send(content: payload + Data("\n".utf8), completion: .contentProcessed { error in
                     if error != nil {
-                        finish(false)
+                        finish(.failed)
                         return
                     }
                     connection.receive(minimumIncompleteLength: 1, maximumLength: 16) { data, _, _, _ in
-                        finish(data?.isEmpty == false)
+                        guard let data, !data.isEmpty else {
+                            finish(.failed)
+                            return
+                        }
+                        let reply = String(decoding: data, as: UTF8.self)
+                            .trimmingCharacters(in: .whitespacesAndNewlines)
+                        finish(reply == "focus" ? .wiredIn : .delivered)
                     }
                 })
             case .failed, .cancelled:
-                finish(false)
+                finish(.failed)
             default:
                 break
             }
         }
         connection.start(queue: queue)
-        queue.asyncAfter(deadline: .now() + 6) { finish(false) }
+        queue.asyncAfter(deadline: .now() + 6) { finish(.failed) }
     }
 
     // MARK: - TXT encoding

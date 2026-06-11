@@ -44,6 +44,14 @@ open /Applications/Holler.app
 - Names are self-assigned (defaults to your macOS full name, change it any
   time from the menu) and stored locally in `UserDefaults`. Nothing leaves
   the local network.
+- **Wired In** — need to focus? Menu → Wired In → 10 minutes / 30 minutes /
+  1 hour. Your menu bar icon becomes headphones, everyone else sees
+  "— Wired In" next to your name, and pings aimed at you are silently
+  suppressed — the sender just sees "🎧 you're Wired In" instead of a ✓.
+  It ends automatically (no indefinite mode on purpose).
+- **Pause media on ping** (Settings…, off by default) — when someone pings
+  you, Holler sends a system pause (like tapping ⏸) so you can hear them
+  walking over.
 
 100% native Swift + AppKit + Network.framework. No Electron, no dependencies,
 no backend.
@@ -62,6 +70,9 @@ no backend.
 - Everyone else running Holler on the network is listed by name. Click one
   to ping them.
 - They get a banner + ding; you get a brief ✓ on the menu bar icon.
+- **Wired In** mutes incoming pings for 10/30/60 minutes and tells senders
+  why their ping didn't land.
+- **Settings…** has the optional pause-media-on-ping behavior.
 - **Change My Name…** updates what others see, live.
 
 ## Notes
