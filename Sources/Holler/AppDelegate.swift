@@ -56,8 +56,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private func updateStatusIcon() {
         guard let button = statusItem.button else { return }
-        let symbol = isWiredIn ? "headphones" : "hand.wave.fill"
-        button.image = NSImage(systemSymbolName: symbol, accessibilityDescription: "Holler")
+        button.image = NSImage(systemSymbolName: "hand.wave.fill", accessibilityDescription: "Holler")
     }
 
     // MARK: - Menu
