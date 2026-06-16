@@ -25,6 +25,7 @@ app: build
 	mkdir -p $(APP_DIR)/Contents/MacOS $(APP_DIR)/Contents/Resources
 	cp $(BINARY) $(APP_DIR)/Contents/MacOS/$(APP_NAME)
 	cp Support/Info.plist $(APP_DIR)/Contents/Info.plist
+	cp Support/AppIcon.icns $(APP_DIR)/Contents/Resources/AppIcon.icns
 	codesign --force --sign - $(APP_DIR)
 	@echo "Built $(APP_DIR) (ad-hoc signed)"
 
@@ -73,15 +74,26 @@ notarize-app: sign
 	xcrun stapler staple $(APP_DIR)
 	rm -f build/notarize-app.zip
 
-# Build the drag-to-Applications DMG from the stapled app.
+# Build the styled drag-to-Applications DMG from the stapled app: custom
+# background image, positioned icons, hidden chrome. The attach/style/detach
+# run in one shell so the mounted device path stays in a shell variable
+# (Make's $(shell) would expand before rw.dmg exists).
 dmg: notarize-app
-	rm -rf build/dmg $(DMG)
-	mkdir -p build/dmg
+	rm -rf build/dmg build/rw.dmg "$(DMG)"
+	mkdir -p build/dmg/.background
 	cp -R $(APP_DIR) build/dmg/
+	cp Support/dmg-background.png build/dmg/.background/background.png
 	ln -s /Applications build/dmg/Applications
 	hdiutil create -volname "$(APP_NAME)" -srcfolder build/dmg \
-		-ov -format UDZO "$(DMG)"
-	rm -rf build/dmg
+		-fs HFS+ -format UDRW -ov build/rw.dmg
+	@set -e; \
+	DEV=$$(hdiutil attach build/rw.dmg -noverify -noautoopen | grep Volumes | head -1 | awk '{print $$1}'); \
+	echo "mounted $$DEV"; \
+	osascript Support/style-dmg.applescript "$(APP_NAME)"; \
+	sync; sleep 1; \
+	hdiutil detach "$$DEV" >/dev/null
+	hdiutil convert build/rw.dmg -format UDZO -imagekey zlib-level=9 -ov -o "$(DMG)"
+	rm -rf build/dmg build/rw.dmg
 	@echo "Built $(DMG)"
 
 # Notarize and staple the DMG itself, so the download is trusted before mount.
