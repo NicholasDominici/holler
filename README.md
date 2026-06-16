@@ -12,17 +12,20 @@ server, no dismissal flow.
 
 ## Install
 
+### Download (easiest — for everyone)
+
+Download **`Holler-x.y.z.dmg`** from the
+[latest release](https://github.com/NicholasDominici/holler/releases/latest),
+open it, and drag Holler onto the Applications folder. The app is signed and
+notarized by Apple, so it just opens — no warnings, nothing to configure.
+
 ### Homebrew
 
 ```sh
-brew install nicholasdominici/tap/holler
-cp -R "$(brew --prefix)/opt/holler/Holler.app" /Applications/
-open /Applications/Holler.app
+brew install --cask nicholasdominici/tap/holler
 ```
 
-Holler builds from source on your machine (a few seconds), so there are no
-Gatekeeper warnings. Requires Xcode command line tools
-(`xcode-select --install`).
+Installs the same signed, notarized app straight into /Applications.
 
 ### From source
 
@@ -32,16 +35,6 @@ cd holler
 make install        # builds Holler.app and copies it to /Applications
 open /Applications/Holler.app
 ```
-
-### Direct download
-
-Grab `Holler-x.y.z.zip` from the
-[latest release](https://github.com/NicholasDominici/holler/releases/latest),
-unzip, and drag Holler.app into /Applications. Because the app isn't
-notarized, macOS will block the first launch — go to System Settings →
-Privacy & Security and click **Open Anyway** (once per machine). The
-Homebrew/source installs skip that dance entirely, which is why they're
-listed first.
 
 ## How it works
 
